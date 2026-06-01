@@ -1,0 +1,624 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Leak Finder · CEO After Dark</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500;1,6..72,600&family=Inter:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --charcoal:#333031; --shiraz:#7a2435; --lipstick:#b8455a; --blush:#e2b5b0;
+  --candlelight:#f3e9dc; --linen:#ffffff; --ink:#2a2728; --muted:#8a8083;
+  --line:rgba(51,48,49,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;color:var(--ink);background:var(--candlelight);
+  line-height:1.6;letter-spacing:-0.01em;-webkit-font-smoothing:antialiased;padding:32px 20px 80px}
+.lf{max-width:760px;margin:0 auto}
+
+/* heads */
+.lf-head{text-align:center;margin-bottom:34px}
+.lf-eyebrow{font-size:11px;letter-spacing:0.32em;text-transform:uppercase;font-weight:500;color:var(--lipstick);margin-bottom:14px}
+.lf h1{font-family:'Newsreader',serif;font-weight:400;font-size:clamp(34px,6vw,52px);line-height:1.04;letter-spacing:-0.025em;color:var(--ink);margin-bottom:14px}
+.lf h1 em{font-style:italic;color:var(--shiraz)}
+.lf-sub{font-size:16px;color:#4a4547;max-width:520px;margin:0 auto}
+
+/* card shell */
+.card{background:var(--linen);border:1px solid var(--line);border-radius:14px;padding:30px 28px;margin-bottom:22px}
+.card .ch{font-size:11px;letter-spacing:0.26em;text-transform:uppercase;font-weight:500;color:var(--shiraz);margin-bottom:8px}
+.card h2{font-family:'Newsreader',serif;font-weight:400;font-size:25px;line-height:1.15;color:var(--ink);margin-bottom:6px}
+.card .cnote{font-size:14px;color:var(--muted);margin-bottom:22px;line-height:1.55}
+
+/* step pills (preset chooser) */
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+@media(max-width:560px){.presets{grid-template-columns:1fr}}
+.preset{text-align:left;background:var(--candlelight);border:1.5px solid var(--line);border-radius:11px;padding:18px 20px;cursor:pointer;transition:border-color .15s,background .15s;font-family:inherit;color:var(--ink)}
+.preset:hover{border-color:var(--blush)}
+.preset.active{border-color:var(--shiraz);background:#fbf4ee}
+.preset .pt{font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:var(--shiraz);margin-bottom:4px}
+.preset .pd{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+/* money inputs row */
+.money-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
+@media(max-width:560px){.money-row{grid-template-columns:1fr}}
+.fld label{display:block;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;font-weight:500;color:var(--ink);margin-bottom:7px}
+.fld .hint{font-size:12px;color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400}
+.inwrap{position:relative}
+.inwrap .pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px}
+.inwrap.has-pre input{padding-left:30px}
+input[type=text],input[type=number]{width:100%;font-family:inherit;font-size:16px;color:var(--ink);background:var(--candlelight);
+  border:1.5px solid var(--line);border-radius:9px;padding:13px 14px;transition:border-color .15s}
+input:focus{outline:none;border-color:var(--shiraz)}
+select{width:auto;font-family:inherit;font-size:14px;color:var(--ink);background:var(--candlelight);border:1.5px solid var(--line);border-radius:9px;padding:9px 12px}
+
+/* stage editor */
+.stages{margin-top:6px}
+.stage{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.stage:last-child{border-bottom:none}
+.stage .sidx{font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:var(--lipstick);width:24px;flex-shrink:0;text-align:center}
+.stage .sname{flex:1}
+.stage .sname input{padding:10px 12px;font-size:15px}
+.stage .scount{width:130px;flex-shrink:0}
+.stage .scount input{padding:10px 12px;font-size:15px;text-align:right}
+.stage .sdel{flex-shrink:0;width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;transition:all .15s}
+.stage .sdel:hover{border-color:var(--lipstick);color:var(--lipstick)}
+.stage-labels{display:flex;gap:12px;padding:0 0 6px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)}
+.stage-labels .l1{width:24px;flex-shrink:0}
+.stage-labels .l2{flex:1}
+.stage-labels .l3{width:130px;flex-shrink:0;text-align:right}
+.stage-labels .l4{width:30px;flex-shrink:0}
+.addstage{margin-top:14px;background:transparent;border:1.5px dashed var(--line);border-radius:9px;color:var(--shiraz);font-family:inherit;font-size:14px;font-weight:500;padding:11px;width:100%;cursor:pointer;transition:all .15s}
+.addstage:hover{border-color:var(--shiraz);background:#fbf4ee}
+.addstage:disabled{opacity:0.4;cursor:not-allowed}
+
+/* how-it-works note */
+.how{background:#fbf4ee;border:1px solid rgba(122,36,53,0.15);border-left:3px solid var(--shiraz);border-radius:9px;padding:15px 18px;margin-bottom:22px}
+.how .ht{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;color:var(--shiraz);margin-bottom:5px}
+.how p{font-size:13.5px;color:#4a4547;line-height:1.55}
+.how .scrawl{font-family:'Caveat',cursive;font-size:18px;color:var(--shiraz);letter-spacing:0}
+
+/* CTA */
+.findbtn{display:block;width:100%;background:var(--lipstick);color:var(--linen);font-family:inherit;font-size:16px;font-weight:500;
+  letter-spacing:0.01em;border:none;border-radius:10px;padding:18px;cursor:pointer;transition:background .18s;margin-top:4px}
+.findbtn:hover{background:var(--shiraz)}
+.example-link{display:block;text-align:center;margin-top:14px;font-size:13px;color:var(--shiraz);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit;width:100%}
+.example-link:hover{color:var(--lipstick)}
+
+/* result */
+#result{display:none;scroll-margin-top:20px}
+#result.show{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.flow{display:flex;flex-wrap:wrap;gap:0;align-items:stretch;margin:6px 0 26px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.fstep{flex:1;min-width:90px;padding:16px 12px;text-align:center;background:var(--linen);border-right:1px solid var(--line);position:relative}
+.fstep:last-child{border-right:none}
+.fstep .fn{font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;line-height:1.3}
+.fstep .fv{font-family:'Newsreader',serif;font-size:24px;color:var(--ink);line-height:1}
+.fdrop{font-size:11px;color:var(--muted);padding:4px 0;text-align:center;letter-spacing:0.02em}
+.fdrop.worst{color:var(--lipstick);font-weight:600}
+.dropline{display:flex;flex-wrap:wrap}
+.dropcell{flex:1;min-width:90px;text-align:center}
+
+.leakcard{background:var(--charcoal);color:var(--candlelight);border-radius:14px;padding:34px 30px;margin:24px 0;text-align:center}
+.leakcard .lh{font-size:11px;letter-spacing:0.26em;text-transform:uppercase;color:var(--blush);margin-bottom:14px}
+.leakcard .lstage{font-family:'Newsreader',serif;font-style:italic;font-size:27px;color:var(--linen);line-height:1.2;margin-bottom:8px}
+.leakcard .lstage b{color:var(--blush);font-style:normal;font-weight:500}
+.leakcard .lbig{font-family:'Newsreader',serif;font-size:clamp(44px,9vw,68px);color:var(--linen);line-height:1.05;margin:18px 0 6px}
+.leakcard .lbig .per{font-size:20px;color:var(--blush)}
+.leakcard .lcaption{font-size:14px;color:rgba(243,233,220,0.75);max-width:440px;margin:0 auto}
+
+.explain{background:var(--linen);border:1px solid var(--line);border-radius:12px;padding:24px 26px;margin-bottom:20px}
+.explain .et{font-family:'Newsreader',serif;font-style:italic;font-size:18px;color:var(--shiraz);margin-bottom:12px}
+.explain p{font-size:15px;color:#3a3637;line-height:1.7;margin-bottom:12px}
+.explain p:last-child{margin-bottom:0}
+.explain .num{color:var(--shiraz);font-weight:600}
+
+.target-row{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;font-size:14px;color:#4a4547;margin:18px 0 6px}
+.target-row input{width:90px;text-align:center;padding:9px 10px;font-size:15px}
+.target-row .tnote{font-size:12.5px;color:var(--muted);font-style:italic;width:100%;text-align:center}
+
+.result-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.dlbtn{display:inline-flex;align-items:center;gap:8px;background:var(--shiraz);color:var(--candlelight);font-family:inherit;font-size:15px;font-weight:500;
+  border:none;border-radius:9px;padding:15px 28px;cursor:pointer;transition:background .18s;text-decoration:none}
+.dlbtn:hover{background:var(--lipstick)}
+.ghostbtn{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--shiraz);font-family:inherit;font-size:15px;font-weight:500;
+  border:1.5px solid var(--line);border-radius:9px;padding:15px 28px;cursor:pointer;transition:all .18s}
+.ghostbtn:hover{border-color:var(--shiraz);background:#fbf4ee}
+
+.err{color:var(--lipstick);font-size:13.5px;text-align:center;margin-top:12px;display:none}
+.err.show{display:block}
+
+/* goal split */
+.gsplit{display:flex;flex-direction:column;gap:14px;max-width:480px;margin:0 auto;text-align:left}
+.gbar{background:rgba(243,233,220,0.12);border-radius:8px;overflow:hidden;height:auto}
+.gbar .glabel{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;gap:12px}
+.gbar .gname{font-size:13px;letter-spacing:0.04em;text-transform:uppercase;color:var(--blush);font-weight:500}
+.gbar .gval{font-family:'Newsreader',serif;font-size:26px;color:var(--linen)}
+.gbar.free{background:rgba(226,181,176,0.22)}
+.gbar.work{background:rgba(243,233,220,0.1)}
+.gbar .gtag{font-size:11px;color:rgba(243,233,220,0.7);font-style:italic;padding:0 16px 11px;display:block}
+.gwin{font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:var(--blush);text-align:center;margin-top:18px;line-height:1.45}
+
+.lf-foot{text-align:center;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-top:30px}
+.lf-foot b{color:var(--shiraz)}
+</style>
+</head>
+<body>
+<div class="lf">
+
+  <div class="lf-head">
+    <div class="lf-eyebrow">CEO After Dark · The Leak Finder</div>
+    <h1>Find the one place<br>your revenue is <em>leaking</em>.</h1>
+    <p class="lf-sub">Map how you actually sell, drop in your numbers, and see the single weakest step. In dollars, not vibes.</p>
+  </div>
+
+  <!-- STEP 1: funnel shape -->
+  <div class="card">
+    <div class="ch">Step one</div>
+    <h2>How do you sell?</h2>
+    <p class="cnote">Pick the shape that's closest. You can rename, add, or remove steps after, so it matches your business exactly.</p>
+    <div class="presets">
+      <button class="preset" data-preset="marketing">
+        <div class="pt">Marketing funnel</div>
+        <div class="pd">You sell on a page. Reach, landing page, checkout, sale. No back-and-forth.</div>
+      </button>
+      <button class="preset" data-preset="sales">
+        <div class="pt">Sales funnel</div>
+        <div class="pd">You sell in conversation. Reach, leads, calls or DMs, offers, sale.</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: the funnel + numbers -->
+  <div class="card" id="funnelCard" style="display:none">
+    <div class="ch">Step two</div>
+    <h2>Your numbers, one stage at a time.</h2>
+    <p class="cnote">Enter how many people reached each stage in a typical month. Rough is fine, you're looking for the shape, not perfection.</p>
+
+    <div class="stage-labels">
+      <span class="l1"></span><span class="l2">Stage</span><span class="l3">How many / month</span><span class="l4"></span>
+    </div>
+    <div class="stages" id="stages"></div>
+    <button class="addstage" id="addStage">+ Add a stage</button>
+
+    <div class="money-row" style="margin-top:26px">
+      <div class="fld">
+        <label>Average sale value <span class="hint">what one customer pays you</span></label>
+        <div class="inwrap has-pre"><span class="pre">$</span><input type="text" id="avgSale" inputmode="numeric" placeholder="290"></div>
+      </div>
+      <div class="fld">
+        <label>These numbers cover <span class="hint">your time window</span></label>
+        <div class="inwrap"><select id="window">
+          <option value="1">one month</option>
+          <option value="3">one quarter</option>
+          <option value="0.25">one week</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div class="fld" style="margin-top:18px">
+      <label>Where you want to be <span class="hint">optional, the monthly revenue you're aiming for</span></label>
+      <div class="inwrap has-pre" style="max-width:280px"><span class="pre">$</span><input type="text" id="goalRev" inputmode="numeric" placeholder="20,000"></div>
+    </div>
+  </div>
+
+  <!-- how it works + find -->
+  <div id="findWrap" style="display:none">
+    <div class="how">
+      <div class="ht">How the leak is worked out</div>
+      <p>No made-up industry benchmarks. We compare your weakest step to <b>your own funnel's average step</b>, then show what you'd earn if that one step merely caught up to the rest. <span class="scrawl">your funnel vs itself, that's the honest version.</span></p>
+    </div>
+    <button class="findbtn" id="findBtn">Find my leak →</button>
+    <button class="example-link" id="exampleBtn">Or, show me an example first</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result">
+    <div class="card" style="padding-bottom:34px">
+      <div class="ch">Your funnel</div>
+      <h2>Here's where everyone goes.</h2>
+      <p class="cnote">Each step shows how many people made it that far, and the drop to the next.</p>
+      <div class="flow" id="flow"></div>
+      <div class="dropline" id="drops"></div>
+    </div>
+
+    <div class="leakcard">
+      <div class="lh">Your biggest leak</div>
+      <div class="lstage" id="leakStage"></div>
+      <div class="lbig" id="leakBig"></div>
+      <div class="lcaption" id="leakCaption"></div>
+    </div>
+
+    <div class="explain">
+      <div class="et">The honest maths</div>
+      <div id="explainBody"></div>
+      <div id="leakTypeWrap" style="display:none;margin-top:16px;padding-top:18px;border-top:1px solid var(--line)">
+        <p style="font-size:15px;color:#3a3637;line-height:1.7" id="leakType"></p>
+      </div>
+      <div class="target-row">
+        <span>Think that step could realistically hit</span>
+        <div class="inwrap has-pre" style="display:inline-block"><span class="pre" style="left:12px">%</span><input type="number" id="targetPct" min="1" max="100" style="padding-left:28px"></div>
+        <span>instead?</span>
+        <button class="ghostbtn" id="recalcBtn" style="padding:9px 18px;font-size:14px">Recalculate</button>
+        <span class="tnote">We default to your funnel's own average. Nudge it if you want a target that feels right for you.</span>
+      </div>
+    </div>
+
+    <div id="goalWrap" style="display:none">
+      <div class="leakcard" style="background:var(--shiraz)">
+        <div class="lh" style="color:var(--blush)">Your path to the goal</div>
+        <div class="lstage" id="goalHeadline"></div>
+        <div id="goalSplit" style="margin:22px 0 6px"></div>
+      </div>
+      <div class="explain">
+        <div class="et">How the goal breaks down</div>
+        <div id="goalBody"></div>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="dlbtn" id="dlBtn">⤓ Download my summary</button>
+      <button class="ghostbtn" id="resetBtn">Start over</button>
+    </div>
+  </div>
+
+  <div class="lf-foot">A <b>SPARK</b> product · CEO After Dark</div>
+</div>
+
+<script>
+const PRESETS={
+  marketing:[{n:'Reach',c:''},{n:'Landing page visits',c:''},{n:'Checkout views',c:''},{n:'Sales',c:''}],
+  sales:[{n:'Reach',c:''},{n:'Leads',c:''},{n:'Conversations',c:''},{n:'Offers made',c:''},{n:'Sales',c:''}]
+};
+const EXAMPLE={
+  preset:'marketing',
+  stages:[{n:'Reach',c:8000},{n:'Landing page visits',c:1200},{n:'Checkout views',c:140},{n:'Sales',c:34}],
+  avg:290, window:1
+};
+let stages=[]; let lastResult=null;
+
+const $=id=>document.getElementById(id);
+const stagesEl=$('stages');
+
+function num(v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));return isNaN(n)?0:n;}
+function fmt(n){return n.toLocaleString('en-US',{maximumFractionDigits:0});}
+function money(n){return '$'+Math.round(n).toLocaleString('en-US');}
+
+function renderStages(){
+  stagesEl.innerHTML='';
+  stages.forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.className='stage';
+    row.innerHTML=`<div class="sidx">${i+1}</div>
+      <div class="sname"><input type="text" value="${s.n.replace(/"/g,'&quot;')}" data-i="${i}" data-k="n" placeholder="Stage name"></div>
+      <div class="scount"><input type="text" inputmode="numeric" value="${s.c}" data-i="${i}" data-k="c" placeholder="0"></div>
+      <button class="sdel" data-del="${i}" title="Remove">×</button>`;
+    stagesEl.appendChild(row);
+  });
+  $('addStage').disabled = stages.length>=5;
+  stagesEl.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const i=+e.target.dataset.i,k=e.target.dataset.k;
+      stages[i][k]= k==='c'? e.target.value : e.target.value;
+    });
+  });
+  stagesEl.querySelectorAll('.sdel').forEach(b=>{
+    b.addEventListener('click',e=>{
+      if(stages.length<=3){flash('You need at least 3 stages to find a leak.');return;}
+      stages.splice(+e.target.dataset.del,1);renderStages();
+    });
+  });
+}
+
+function loadPreset(key){
+  stages=PRESETS[key].map(s=>({...s}));
+  renderStages();
+  $('funnelCard').style.display='block';
+  $('findWrap').style.display='block';
+  document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active',p.dataset.preset===key));
+  $('funnelCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+document.querySelectorAll('.preset').forEach(p=>{
+  p.addEventListener('click',()=>loadPreset(p.dataset.preset));
+});
+
+$('addStage').addEventListener('click',()=>{
+  if(stages.length>=5)return;
+  stages.push({n:'New stage',c:''});renderStages();
+});
+
+function flash(msg){const e=$('err');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),4000);}
+
+function compute(targetOverride){
+  const counts=stages.map(s=>num(s.c));
+  const names=stages.map(s=>s.n||'Stage');
+  for(let i=0;i<counts.length;i++){if(counts[i]<=0){flash('Pop a number into every stage first (rough is fine).');return null;}}
+  for(let i=1;i<counts.length;i++){if(counts[i]>counts[i-1]){flash('Each stage should be the same or smaller than the one before it.');return null;}}
+  const avg=num($('avgSale').value); if(avg<=0){flash('Add your average sale value so we can price the leak.');return null;}
+  const win=parseFloat($('window').value);
+
+  // step conversion rates (stage i -> i+1)
+  const rates=[]; for(let i=0;i<counts.length-1;i++){rates.push(counts[i+1]/counts[i]);}
+  // funnel's own average step conversion
+  const avgRate=rates.reduce((a,b)=>a+b,0)/rates.length;
+  // worst = lowest rate
+  let wi=0; rates.forEach((r,i)=>{if(r<rates[wi])wi=i;});
+
+  const target = targetOverride!=null ? targetOverride/100 : avgRate;
+  // recompute sales if worst step performed at target, holding all OTHER rates fixed
+  let baseSales=counts[counts.length-1];
+  // rebuild downstream from worst step using target
+  let improvedAtWorst = counts[wi]*target;
+  let flow=improvedAtWorst;
+  for(let i=wi+1;i<rates.length;i++){flow=flow*rates[i];}
+  const improvedSales=flow;
+  const extraSales=Math.max(0,improvedSales-baseSales);
+  // monthly normalisation
+  const extraMonthly=extraSales/win;
+  const dollarsMonthly=extraMonthly*avg;
+
+  // ---- goal path (optional) ----
+  let goal=null;
+  const goalRev=num($('goalRev').value);
+  if(goalRev>0){
+    const reachMonthly=counts[0]/win;
+    const nowRevMonthly=(baseSales/win)*avg;
+    // fixed-leak rates: worst step lifted to funnel average, all else held
+    const fixedRates=rates.slice(); fixedRates[wi]=avgRate;
+    let mult=1; fixedRates.forEach(r=>mult*=r);
+    const fixedSalesMonthly=reachMonthly*mult;
+    const fixedRevMonthly=fixedSalesMonthly*avg;
+    const freeMoney=Math.max(0,fixedRevMonthly-nowRevMonthly);
+    const clearsOnLeak = fixedRevMonthly>=goalRev;
+    let reachNeeded=reachMonthly, extraReach=0, workMoney=0;
+    if(!clearsOnLeak && mult>0){
+      const salesNeeded=goalRev/avg;
+      reachNeeded=salesNeeded/mult;
+      extraReach=Math.max(0,reachNeeded-reachMonthly);
+      workMoney=Math.max(0,goalRev-fixedRevMonthly);
+    }
+    goal={goalRev,nowRevMonthly,fixedRevMonthly,freeMoney,clearsOnLeak,reachMonthly,reachNeeded,extraReach,workMoney};
+  }
+
+  return {counts,names,rates,avgRate,wi,target,baseSales,improvedSales,extraSales,extraMonthly,dollarsMonthly,avg,win,goal};
+}
+
+function renderResult(r){
+  lastResult=r;
+  // flow
+  const flow=$('flow'); flow.innerHTML='';
+  r.counts.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='fstep';
+    d.innerHTML=`<div class="fn">${r.names[i]}</div><div class="fv">${fmt(c)}</div>`;
+    flow.appendChild(d);
+  });
+  // drops under each gap
+  const drops=$('drops'); drops.innerHTML='';
+  r.counts.forEach((c,i)=>{
+    const cell=document.createElement('div');cell.className='dropcell';
+    if(i<r.rates.length){
+      const pct=(r.rates[i]*100);
+      const worst=i===r.wi;
+      cell.innerHTML=`<div class="fdrop ${worst?'worst':''}">↓ ${pct.toFixed(pct<10?1:0)}% through${worst?' · leak':''}</div>`;
+    }else{cell.innerHTML='';}
+    drops.appendChild(cell);
+  });
+
+  const fromN=r.names[r.wi], toN=r.names[r.wi+1];
+  $('leakStage').innerHTML=`<b>${fromN}</b> &nbsp;→&nbsp; <b>${toN}</b>`;
+  $('leakBig').innerHTML= r.dollarsMonthly>0 ? `${money(r.dollarsMonthly)}<span class="per"> / month</span>` : `Your funnel's already even`;
+  $('leakCaption').textContent= r.dollarsMonthly>0
+    ? `That's what this one weak step is quietly costing you. Same reach. Same audience. One leak.`
+    : `No single step is dragging. Every stage converts close to your average, so there's no obvious leak to plug tonight. Pour another and look at growing the top of the funnel.`;
+
+  const worstPct=(r.rates[r.wi]*100);
+  const avgPct=(r.avgRate*100);
+  const tgtPct=(r.target*100);
+  let body=`<p>Your funnel converts at an average of <span class="num">${avgPct.toFixed(0)}%</span> per step. But <span class="num">${fromN} → ${toN}</span> only converts at <span class="num">${worstPct.toFixed(worstPct<10?1:0)}%</span>. That's your weakest link.</p>`;
+  if(r.dollarsMonthly>0){
+    body+=`<p>If that one step performed at <span class="num">${tgtPct.toFixed(0)}%</span> instead, while everything else stayed exactly as it is, you'd make about <span class="num">${fmt(r.extraMonthly)} more ${r.extraMonthly===1?'sale':'sales'} a month</span>. At your <span class="num">${money(r.avg)}</span> average sale, that's <span class="num">${money(r.dollarsMonthly)} a month</span>, or <span class="num">${money(r.dollarsMonthly*12)} a year</span>, left on the table.</p>`;
+    body+=`<p>You don't have a traffic problem here. You have one leaky step. That's a much smaller, much more fixable thing.</p>`;
+  }else{
+    body+=`<p>Nothing's badly out of line, so there's no single fix that unlocks a pile of revenue tonight. That's a good problem. Your next move is more reach at the top, not patching a leak.</p>`;
+  }
+  $('explainBody').innerHTML=body;
+  $('targetPct').value=avgPct.toFixed(0);
+
+  // leak-type line by position (names the type, sends nowhere)
+  const gapCount=r.rates.length;
+  let leakType='';
+  if(r.dollarsMonthly>0){
+    if(r.wi===0){
+      leakType=`<b>This is a visibility problem.</b> Your leak is right at the top, people aren't arriving in the first place, rather than arriving and failing to convert. The fix lives in how you get found.`;
+    } else if(r.wi===gapCount-1){
+      leakType=`<b>This is an offer problem.</b> People make it all the way to the edge and don't buy. That's usually price, proof, or trust, not traffic.`;
+    } else {
+      leakType=`<b>This is a nurture problem.</b> People are interested but going cold before they buy. The gap is in the follow-up, the conversation, or the thing that's meant to carry them across.`;
+    }
+    $('leakType').innerHTML=leakType;
+    $('leakTypeWrap').style.display='block';
+  } else {
+    $('leakTypeWrap').style.display='none';
+  }
+
+  // ---- goal path render ----
+  const gw=$('goalWrap');
+  if(r.goal){
+    const g=r.goal;
+    gw.style.display='block';
+    if(g.clearsOnLeak){
+      $('goalHeadline').innerHTML=`You're closer than you think.`;
+      $('goalSplit').innerHTML=`<div class="gsplit">
+        <div class="gbar free"><div class="glabel"><span class="gname">Just by fixing the leak</span><span class="gval">${money(g.fixedRevMonthly)}/mo</span></div><span class="gtag">same reach, same audience, nothing else changes</span></div>
+        <div class="gwin">Plugging this one leak already clears your ${money(g.goalRev)} goal. You don't need more traffic. You need to fix the step you're losing people on.</div>
+      </div>`;
+      $('goalBody').innerHTML=`<p>You're aiming for <span class="num">${money(g.goalRev)}/month</span>. You're at <span class="num">${money(g.nowRevMonthly)}</span> now.</p>
+        <p>Here's the part most people miss: you already have enough reach. Fixing your weakest step lifts you to <span class="num">${money(g.fixedRevMonthly)}/month</span> on the exact traffic you're getting today. That's your goal, hit without spending a dollar more on getting found.</p>
+        <p>Pour another. The work tonight isn't growth. It's the leak.</p>`;
+    } else {
+      $('goalHeadline').innerHTML=`<b>${money(g.nowRevMonthly)}</b> &nbsp;→&nbsp; <b>${money(g.goalRev)}</b>`;
+      $('goalSplit').innerHTML=`<div class="gsplit">
+        <div class="gbar free"><div class="glabel"><span class="gname">① Fix the leak</span><span class="gval">+${money(g.freeMoney)}/mo</span></div><span class="gtag">free money, same reach</span></div>
+        <div class="gbar work"><div class="glabel"><span class="gname">② Grow the top</span><span class="gval">+${fmt(g.extraReach)} reach/mo</span></div><span class="gtag">the work, at your improved rates</span></div>
+        <div class="gwin">Plug the leak first. It's the cheapest ${money(g.freeMoney)} you'll ever make.</div>
+      </div>`;
+      $('goalBody').innerHTML=`<p>You're aiming for <span class="num">${money(g.goalRev)}/month</span>, up from <span class="num">${money(g.nowRevMonthly)}</span>. That's a <span class="num">${money(g.goalRev-g.nowRevMonthly)}</span> gap. It splits into two very different jobs.</p>
+        <p><span class="num">The free money.</span> Fixing your weakest step, on the reach you already have, is worth <span class="num">${money(g.freeMoney)}/month</span>. No extra traffic, no extra spend. This is the first move, always.</p>
+        <p><span class="num">The work.</span> The rest of the gap needs about <span class="num">${fmt(g.extraReach)} more people reaching the top of your funnel each month</span> (around <span class="num">${fmt(g.reachNeeded)}</span> total), at your improved conversion rates. That's a real, namable growth target, not a vague "get bigger."</p>
+        <p>But fix the leak first. Growing the top while the leak's still open just pours more people through the same hole.</p>`;
+    }
+  } else {
+    gw.style.display='none';
+  }
+
+  $('result').classList.add('show');
+  $('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+$('findBtn').addEventListener('click',()=>{const r=compute();if(r)renderResult(r);});
+$('recalcBtn').addEventListener('click',()=>{
+  const t=num($('targetPct').value);
+  if(t<=0||t>100){flash('Target should be between 1 and 100%.');return;}
+  const r=compute(t);if(r)renderResult(r);
+});
+
+$('exampleBtn').addEventListener('click',()=>{
+  loadPreset(EXAMPLE.preset);
+  stages=EXAMPLE.stages.map(s=>({...s}));renderStages();
+  $('avgSale').value=EXAMPLE.avg;$('window').value=String(EXAMPLE.window);
+  const r=compute();if(r)renderResult(r);
+});
+
+$('resetBtn').addEventListener('click',()=>{
+  $('result').classList.remove('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ---- download styled summary (canvas -> PNG) ---- */
+$('dlBtn').addEventListener('click',async ()=>{
+  if(!lastResult)return;
+  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+  const r=lastResult;
+  const g=r.goal;
+  const W=1080, HMAX=2000, s=2;
+  const cv=document.createElement('canvas');cv.width=W*s;cv.height=HMAX*s;
+  const x=cv.getContext('2d');x.scale(s,s);
+  x.textBaseline='alphabetic';
+  const L=110, R=W-110;
+  x.fillStyle='#333031';x.fillRect(0,0,W,HMAX);
+  // top band
+  x.fillStyle='#7a2435';x.fillRect(0,0,W,168);
+  x.textAlign='center';
+  x.fillStyle='#e2b5b0';x.font='600 20px Inter, sans-serif';
+  x.fillText('CEO AFTER DARK  ·  THE LEAK FINDER',W/2,72);
+  x.fillStyle='#f3e9dc';x.font='400 42px Newsreader, Georgia, serif';
+  x.fillText('My revenue leak, and the fix',W/2,128);
+
+  const fromN=r.names[r.wi],toN=r.names[r.wi+1];
+  let y=250;
+
+  // --- leak headline (compact) ---
+  x.textAlign='center';
+  x.fillStyle='#e2b5b0';x.font='italic 30px Newsreader, Georgia, serif';
+  x.fillText(`${fromN}  →  ${toN}`,W/2,y); y+=78;
+  x.fillStyle='#f3e9dc';x.font='400 96px Newsreader, Georgia, serif';
+  x.fillText(r.dollarsMonthly>0?money(r.dollarsMonthly):'Even',W/2,y); y+=42;
+  x.fillStyle='#e2b5b0';x.font='400 24px Newsreader, Georgia, serif';
+  if(r.dollarsMonthly>0)x.fillText('leaking every month  ·  '+money(r.dollarsMonthly*12)+' a year',W/2,y);
+  y+=44;
+
+  // --- THE HONEST MATHS block (the hero of the card) ---
+  x.strokeStyle='rgba(243,233,220,0.18)';x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();y+=44;
+  x.textAlign='left';
+  x.fillStyle='#e2b5b0';x.font='italic 26px Newsreader, Georgia, serif';
+  x.fillText('The honest maths',L,y); y+=42;
+  x.fillStyle='#f3e9dc';x.font='400 21px Inter, sans-serif';
+  const worstPct=(r.rates[r.wi]*100), avgPct=(r.avgRate*100), tgtPct=(r.target*100);
+  const m1=`Your funnel averages ${avgPct.toFixed(0)}% per step. This one converts at just ${worstPct.toFixed(worstPct<10?1:0)}%.`;
+  const m2 = r.dollarsMonthly>0
+    ? `Lift it to ${tgtPct.toFixed(0)}% and you make ~${fmt(r.extraMonthly)} more ${r.extraMonthly===1?'sale':'sales'} a month at your ${money(r.avg)} average. Same reach.`
+    : `Every stage converts close to your average. No single leak to plug, look at growing the top.`;
+  y=wrapLeft(x,m1,L,y,R-L,36)+22;
+  y=wrapLeft(x,m2,L,y,R-L,36)+26;
+
+  // leak type line
+  if(r.dollarsMonthly>0){
+    let lt = r.wi===0 ? 'A visibility problem: people aren\u2019t arriving in the first place.'
+      : r.wi===r.rates.length-1 ? 'An offer problem: they reach the edge and don\u2019t buy. Price, proof, or trust.'
+      : 'A nurture problem: interested, but going cold before they buy.';
+    x.fillStyle='#e2b5b0';x.font='italic 21px Newsreader, Georgia, serif';
+    y=wrapLeft(x,lt,L,y,R-L,32)+26;
+  }
+
+  // --- GOAL breakdown ---
+  if(g){
+    x.strokeStyle='rgba(243,233,220,0.18)';x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();y+=44;
+    x.fillStyle='#e2b5b0';x.font='italic 26px Newsreader, Georgia, serif';
+    x.fillText('My path to '+money(g.goalRev)+'/month',L,y); y+=46;
+    if(g.clearsOnLeak){
+      x.fillStyle='#f3e9dc';x.font='400 21px Inter, sans-serif';
+      y=wrapLeft(x,`Fixing this leak alone lifts me to ${money(g.fixedRevMonthly)}/month on the reach I already have. That clears the goal. The work tonight is the leak, not growth.`,L,y,R-L,32)+10;
+    } else {
+      // two bars
+      drawBar(x,L,y,R-L,'\u2460  Fix the leak','+'+money(g.freeMoney)+'/mo','free money, same reach','#e2b5b0',0.22); y+=96;
+      drawBar(x,L,y,R-L,'\u2461  Grow the top','+'+fmt(g.extraReach)+' reach/mo','the work, at improved rates','#f3e9dc',0.10); y+=96;
+      x.fillStyle='#e2b5b0';x.font='italic 22px Newsreader, Georgia, serif';
+      y=wrapLeft(x,'Plug the leak first. It\u2019s the cheapest '+money(g.freeMoney)+' I\u2019ll ever make.',L,y+6,R-L,30)+14;
+    }
+  }
+
+  // footer
+  y+=40;
+  x.textAlign='center';
+  x.fillStyle='#8a8083';x.font='600 15px Inter, sans-serif';
+  x.fillText('A SPARK PRODUCT  ·  SPARKBUSINESS.GLOBAL',W/2,y);
+  const Hfinal=Math.min(HMAX, y+40);
+
+  // crop to content
+  const out=document.createElement('canvas');out.width=W*s;out.height=Hfinal*s;
+  const ox=out.getContext('2d');
+  ox.drawImage(cv,0,0,W*s,Hfinal*s,0,0,W*s,Hfinal*s);
+
+  const img=out.toDataURL('image/png');
+  const jpg=out.toDataURL('image/jpeg',0.92);
+  const jsPDFns = window.jspdf || window.jsPDF;
+  if(jsPDFns && jsPDFns.jsPDF){
+    const {jsPDF}=jsPDFns;
+    const pdf=new jsPDF({orientation:'portrait',unit:'px',format:[W,Hfinal]});
+    pdf.addImage(jpg,'JPEG',0,0,W,Hfinal);
+    pdf.save('my-revenue-leak.pdf');
+  } else {
+    // fallback: PNG if the PDF library didn't load
+    const a=document.createElement('a');
+    a.download='my-revenue-leak.png';a.href=img;a.click();
+  }
+});
+function drawBar(ctx,bx,by,bw,name,val,tag,col,alpha){
+  ctx.fillStyle=`rgba(${col==='#e2b5b0'?'226,181,176':'243,233,220'},${alpha})`;
+  roundRect(ctx,bx,by,bw,80,10);ctx.fill();
+  ctx.textAlign='left';ctx.fillStyle=col;ctx.font='600 17px Inter, sans-serif';
+  ctx.fillText(name.toUpperCase(),bx+24,by+34);
+  ctx.fillStyle='rgba(243,233,220,0.7)';ctx.font='italic 16px Newsreader, Georgia, serif';
+  ctx.fillText(tag,bx+24,by+60);
+  ctx.textAlign='right';ctx.fillStyle='#f3e9dc';ctx.font='400 34px Newsreader, Georgia, serif';
+  ctx.fillText(val,bx+bw-24,by+50);
+  ctx.textAlign='left';
+}
+function roundRect(ctx,rx,ry,rw,rh,rr){ctx.beginPath();ctx.moveTo(rx+rr,ry);ctx.arcTo(rx+rw,ry,rx+rw,ry+rh,rr);ctx.arcTo(rx+rw,ry+rh,rx,ry+rh,rr);ctx.arcTo(rx,ry+rh,rx,ry,rr);ctx.arcTo(rx,ry,rx+rw,ry,rr);ctx.closePath();}
+function wrapLeft(ctx,text,lx,y,maxW,lh){
+  const words=text.split(' ');let line='';let yy=y;
+  for(const w of words){const t=line+w+' ';if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line.trim(),lx,yy);line=w+' ';yy+=lh;}else line=t;}
+  ctx.fillText(line.trim(),lx,yy);return yy;
+}
+function wrapText(ctx,text,cx,y,maxW,lh){
+  const words=text.split(' ');let line='';let yy=y;
+  for(const w of words){const t=line+w+' ';if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line.trim(),cx,yy);line=w+' ';yy+=lh;}else line=t;}
+  ctx.fillText(line.trim(),cx,yy);
+}
+</script>
+</body>
+</html>
